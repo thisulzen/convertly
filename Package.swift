@@ -8,5 +8,6 @@ let package = Package(
     targets: [
         .executableTarget(name: "Convertly"),
         .testTarget(name: "ConvertlyTests", dependencies: ["Convertly"])
-    ]
+    ],
+    swiftLanguageVersions: [.v5]
 )
