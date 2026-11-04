@@ -18,8 +18,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build release executable
-        run: swift build -c release
+      - name: Build Intel and Apple Silicon binaries
+        shell: bash
+        run: |
+          set -euo pipefail
+          swift build -c release --triple x86_64-apple-macosx14.0
+          swift build -c release --triple arm64-apple-macosx14.0
+          INTEL=".build/x86_64-apple-macosx/release/Convertly"
+          ARM=".build/arm64-apple-macosx/release/Convertly"
+          test -f "$INTEL"
+          test -f "$ARM"
+          mkdir -p dist
+          lipo -create "$INTEL" "$ARM" -output dist/Convertly
+          lipo -info dist/Convertly
 
       - name: Assemble app bundle
         shell: bash
@@ -27,7 +38,8 @@ jobs:
           set -euo pipefail
           APP="Convertly.app"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-          cp ".build/release/Convertly" "$APP/Contents/MacOS/Convertly"
+          cp "dist/Convertly" "$APP/Contents/MacOS/Convertly"
+          chmod 755 "$APP/Contents/MacOS/Convertly"
           PLIST="$APP/Contents/Info.plist"
           /usr/libexec/PlistBuddy -c "Add :CFBundleName string Convertly" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Convertly" "$PLIST"
@@ -35,11 +47,15 @@ jobs:
           /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string Convertly" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundlePackageType string APPL" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 1" "$PLIST"
-          VERSION="${GITHUB_REF_NAME#v}"
-          if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then VERSION="0.1.0"; fi
-          /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string 0.1.0" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string 14.0" "$PLIST"
           /usr/libexec/PlistBuddy -c "Add :NSHighResolutionCapable bool true" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSPrincipalClass string NSApplication" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleSupportedPlatforms array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleSupportedPlatforms:0 string MacOSX" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :LSArchitecturePriority array" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :LSArchitecturePriority:0 string x86_64" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :LSArchitecturePriority:1 string arm64" "$PLIST"
           /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP" Convertly-macOS.zip
 
       - name: Publish GitHub Release
