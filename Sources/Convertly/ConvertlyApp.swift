@@ -253,12 +253,12 @@ struct ConverterView: View {
     }
 }
 
-struct ConversionResult {
+struct ConversionResult: Sendable {
     let success: Bool
     let message: String
 }
 
-enum OutputFormat: String, CaseIterable, Identifiable {
+enum OutputFormat: String, CaseIterable, Identifiable, Sendable {
     case pdf, md, txt, html, png, jpg
     var id: String { rawValue }
     var symbol: String {
