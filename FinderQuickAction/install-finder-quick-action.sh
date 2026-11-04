@@ -10,6 +10,15 @@ cat > "$SERVICE/Contents/Info.plist" <<'PLIST'
 <key>CFBundleIdentifier</key><string>com.thisulzen.convertly.finderquickaction</string>
 <key>CFBundleName</key><string>Convert with Convertly</string>
 <key>CFBundlePackageType</key><string>WORK</string>
+<key>NSServices</key>
+<array>
+  <dict>
+    <key>NSMenuItem</key>
+    <dict><key>default</key><string>Convert with Convertly</string></dict>
+    <key>NSMessage</key><string>runWorkflowAsService</string>
+    <key>NSSendTypes</key><array><string>public.item</string></array>
+  </dict>
+</array>
 </dict></plist>
 PLIST
 SCRIPT_B64="$(/usr/bin/base64 < "$ROOT/FinderQuickAction/convert-selected-files.sh" | tr -d '\n')"
@@ -29,4 +38,5 @@ action = {
 workflow={"AMApplicationBuild":"510","AMApplicationVersion":"2.10","AMDocumentVersion":"2","actions":[action],"connectors":[],"workflowMetaData":{"serviceInputTypeIdentifier":"com.apple.Automator.fileSystemObject","serviceOutputTypeIdentifier":"com.apple.Automator.nothing","serviceProcessesInput":True,"workflowTypeIdentifier":"com.apple.Automator.servicesMenu"}}
 with open(sys.argv[1],"wb") as f: plistlib.dump(workflow,f,fmt=plistlib.FMT_XML,sort_keys=False)
 PY
+/System/Library/CoreServices/pbs -flush >/dev/null 2>&1 || true
 /usr/bin/osascript -e 'display dialog "Convert with Convertly was installed. In Finder, right-click a file and choose Quick Actions → Convert with Convertly." buttons {"OK"} default button "OK" with title "Convertly"'
