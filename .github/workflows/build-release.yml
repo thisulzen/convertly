@@ -3,7 +3,7 @@ name: Build and Release macOS App
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
   workflow_dispatch:
 
 permissions:
@@ -15,37 +15,38 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Build release executable
         run: swift build -c release
+
       - name: Assemble app bundle
         shell: bash
         run: |
-          APP='Convertly.app'
+          set -euo pipefail
+          APP="Convertly.app"
           mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-          cp '.build/release/Convertly' "$APP/Contents/MacOS/Convertly"
+          cp ".build/release/Convertly" "$APP/Contents/MacOS/Convertly"
+          PLIST="$APP/Contents/Info.plist"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleName string Convertly" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string Convertly" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIdentifier string com.thisulzen.convertly" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleExecutable string Convertly" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundlePackageType string APPL" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string 1" "$PLIST"
           VERSION="${GITHUB_REF_NAME#v}"
-          cat > "$APP/Contents/Info.plist" <<PLIST
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>CFBundleName</key><string>Convertly</string>
-  <key>CFBundleDisplayName</key><string>Convertly</string>
-  <key>CFBundleIdentifier</key><string>com.thisulzen.convertly</string>
-  <key>CFBundleExecutable</key><string>Convertly</string>
-  <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleVersion</key><string>1</string>
-  <key>CFBundleShortVersionString</key><string>${VERSION:-0.1.0}</string>
-  <key>LSMinimumSystemVersion</key><string>14.0</string>
-  <key>NSHighResolutionCapable</key><true/>
-</dict></plist>
-PLIST
+          if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then VERSION="0.1.0"; fi
+          /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $VERSION" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :LSMinimumSystemVersion string 14.0" "$PLIST"
+          /usr/libexec/PlistBuddy -c "Add :NSHighResolutionCapable bool true" "$PLIST"
           /usr/bin/ditto -c -k --sequesterRsrc --keepParent "$APP" Convertly-macOS.zip
+
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: Convertly-macOS.zip
+
       - name: Upload build artifact
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
