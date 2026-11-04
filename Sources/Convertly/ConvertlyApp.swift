@@ -242,10 +242,11 @@ struct ConverterView: View {
                     completed.append(.init(success: false, message: "\(file.lastPathComponent): \(error.localizedDescription)"))
                 }
             }
+            let finalResults = completed
             await MainActor.run {
-                results = completed
-                let successes = completed.filter(\.success).count
-                status = "\(successes) of \(completed.count) file(s) converted."
+                results = finalResults
+                let successes = finalResults.filter(\.success).count
+                status = "\(successes) of \(finalResults.count) file(s) converted."
                 converting = false
             }
         }
